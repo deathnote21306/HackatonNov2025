@@ -3,7 +3,40 @@
   <div class="p-4 bg-light rounded-3">
     <h1 class="mb-3">Welcome to McGill Medical AI Assistant</h1>
     <p class="lead">Call or text our agent at <strong>{{ AGENT_NUMBER }}</strong> for triage and scheduling.</p>
-    <a class="btn btn-danger" href="/contact">Contact options</a>
-    <a class="btn btn-outline-secondary" href="/calendar">View calendar</a>
+    <div class="mt-4">
   </div>
 {% endblock %}
+
+<div class="container mt-4">
+  <h2 class="mb-3">Next Appointment</h2>
+
+  {% if next_appt %}
+  <div class="card p-3" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <h3 style="margin:0;">{{ next_appt['kind'] or 'Consultation' }}</h3>
+        <p class="text-muted mb-0">{{ next_appt['name'] }}</p>
+      </div>
+      <span class="btn {% if next_appt['status'] == 'confirmed' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+        {{ next_appt['status']|capitalize }}
+      </span>
+    </div>
+
+    <hr style="border-top: 1px solid var(--border); margin: 10px 0;">
+
+    <div>
+      <strong>📅 Date & Time:</strong>
+      <span>{{ next_appt['start_at'] }}</span>
+    </div>
+
+    <div class="table-buttons mt-3">
+      <a href="/calendar" class="btn btn-outline-secondary">View Calendar</a>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="alert alert-info mt-3">
+    No upcoming appointments. <a href="/calendar" class="btn btn-outline-secondary btn-sm ms-2">Book one</a>
+  </div>
+  {% endif %}
+</div>

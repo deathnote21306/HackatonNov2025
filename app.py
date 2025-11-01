@@ -2,7 +2,7 @@ import os
 import sqlite3
 
 from cryptography.fernet import Fernet
-from flask import Flask, flash, redirect, render_template, request, session, jsonify
+from flask import Flask, flash, redirect, render_template, request, session, jsonify, g
 from flask_session import Session
 from flask_wtf import CSRFProtect
 from dotenv import load_dotenv
@@ -18,7 +18,7 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-db = sqlite3.connect("app.db")
+db = sqlite3.connect("app.db", check_same_thread=False)
 
 load_dotenv()
 

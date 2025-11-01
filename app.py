@@ -1,13 +1,14 @@
 import os
 
 from cryptography.fernet import Fernet
-from flask import Flask, flash, redirect, render_template, request, session, jsonify, g
+from flask import Flask, flash, redirect, render_template, request, session, jsonify, request, abort
 from flask_session import Session
 from cs50 import SQL
 from flask_wtf import CSRFProtect
 from dotenv import load_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
-from helpers import apologize, login_required
+from helpers import apologize, get_user_appointments
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -18,9 +19,11 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-db = SQL("sqlite:///app.db")
+db = SQL("sqlite:///database.db")
 
 load_dotenv()
+
+N8N_WEBHOOK_TOKEN = os.getenv("N8N_WEBHOOK_TOKEN", "super-secret")
 
 FERNET_KEY = os.getenv("FERNET_KEY")
 fernet = Fernet(FERNET_KEY)
@@ -39,7 +42,7 @@ def after_request(response):
 @app.route("/index")
 def index():
     if session.get("user_id"):
-        return render_template("user_panel.html")
+        return redirect("/user_panel")
     else:
         return render_template("index.html")
 
@@ -113,12 +116,63 @@ def register():
     else:
         return render_template("register.html")
     
+
 @app.route("/user_panel")
 def user_panel():
-    if session.get("user_id"):
-        return render_template("user_panel.html")
-    else:
-        return render_template("index.html")
+    if not session.get("user_id"):
+        return redirect("/login")
+
+    user_id = session["user_id"]
+    appointments = get_user_appointments(user_id)
+
+    return render_template(
+        "user_panel.html",
+        appointments=appointments
+    )
 
 
 
+@app.post("/webhooks/elevenlabs")
+def elevenlabs_webhook():
+    if request.headers.get("X-N8N-Token") != N8N_WEBHOOK_TOKEN:
+        abort(401)
+
+    data = request.get_json(silent=True) or {}
+
+    # Expect n8n to send at least: user_id, transcript
+    user_id      = data.get("user_id")            # int
+    transcript   = data.get("transcript", "")     # str
+    start_at     = data.get("start_at")           # 'YYYY-MM-DD HH:MM'  (optional)
+    kind         = (data.get("kind") or "Consultation").strip()
+    language     = data.get("language")
+    caller       = data.get("caller")
+    call_sid     = data.get("callSid")
+    recording    = data.get("recordingUrl")
+
+    # Always store raw payload for debugging/audit
+    db.execute(
+        "INSERT INTO call_transcripts (user_id, caller, call_sid, recording_url, transcript, language) VALUES (?, ?, ?, ?, ?, ?)",
+        user_id, caller, call_sid, recording, transcript, language
+    )
+
+    # If we don't have a user_id or a parsed datetime yet, stop after storing transcript.
+    if not user_id:
+        return {"ok": True, "note": "stored transcript (missing user_id)"}
+
+    # If n8n already parsed date/time, just use it. Otherwise, skip creating an appointment here.
+    if not start_at:
+        return {"ok": True, "note": "stored transcript (no start_at provided)"}
+
+    # (Optional) sanity check: must look like 'YYYY-MM-DD HH:MM'
+    try:
+        datetime.strptime(start_at, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return {"ok": True, "note": "start_at not in 'YYYY-MM-DD HH:MM' format"}
+
+    # Create the appointment
+    db.execute(
+        "INSERT INTO appointments (user_id, kind, start_at, status) VALUES (?, ?, ?, ?)",
+        user_id, kind, start_at, "pending"
+    )
+
+    return {"ok": True, "created": {"user_id": user_id, "kind": kind, "start_at": start_at}}

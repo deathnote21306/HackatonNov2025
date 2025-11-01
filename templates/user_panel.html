@@ -1,42 +1,45 @@
 {% extends "layout.html" %}
+
+{% block title %}User Panel{% endblock %}
+
 {% block main %}
-  <div class="p-4 bg-light rounded-3">
-    <h1 class="mb-3">Welcome to McGill Medical AI Assistant</h1>
-    <p class="lead">Call or text our agent at <strong>{{ AGENT_NUMBER }}</strong> for triage and scheduling.</p>
-    <div class="mt-4">
-  </div>
-{% endblock %}
+<div class="container">
 
-<div class="container mt-4">
-  <h2 class="mb-3">Next Appointment</h2>
+  <h1 class="mb-3">Welcome{% if session.get('user_name') %}, {{ session['user_name'] }}{% endif %}</h1>
 
-  {% if next_appt %}
-  <div class="card p-3" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <div>
-        <h3 style="margin:0;">{{ next_appt['kind'] or 'Consultation' }}</h3>
-        <p class="text-muted mb-0">{{ next_appt['name'] }}</p>
-      </div>
-      <span class="btn {% if next_appt['status'] == 'confirmed' %}btn-success{% else %}btn-outline-secondary{% endif %}">
-        {{ next_appt['status']|capitalize }}
-      </span>
-    </div>
+  <section class="mt-5">
+    <h2 class="mb-2">All Appointments</h2>
 
-    <hr style="border-top: 1px solid var(--border); margin: 10px 0;">
+    {% if appointments and appointments|length > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in appointments %}
+            <tr>
+                <td>{{ a['appt_date'] }}</td>
+                <td>{{ a['appt_time'] }}</td>
+                <td>{{ a['kind'] or 'Consultation' }}</td>
+                <td>{{ a['status']|capitalize }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="text-muted">You have no appointments yet.</p>
+    {% endif %}
+  </section>
 
-    <div>
-      <strong>📅 Date & Time:</strong>
-      <span>{{ next_appt['start_at'] }}</span>
-    </div>
+  <section class="mt-5">
+    <h2>Voice Logs (optional)</h2>
+    <p class="text-muted">Later, you can show transcripts from phone calls here.</p>
+  </section>
 
-    <div class="table-buttons mt-3">
-      <a href="/calendar" class="btn btn-outline-secondary">View Calendar</a>
-    </div>
-  </div>
-
-  {% else %}
-  <div class="alert alert-info mt-3">
-    No upcoming appointments. <a href="/calendar" class="btn btn-outline-secondary btn-sm ms-2">Book one</a>
-  </div>
-  {% endif %}
 </div>
+{% endblock %}

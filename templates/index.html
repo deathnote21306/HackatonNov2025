@@ -1,9 +1,43 @@
 {% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
 {% block main %}
-  <div class="p-4 bg-light rounded-3">
-    <h1 class="mb-3">Welcome to McGill Medical AI Assistant</h1>
-    <p class="lead">Call or text our agent at <strong>{{ AGENT_NUMBER }}</strong> for triage and scheduling.</p>
-    <a class="btn btn-danger" href="/contact">Contact options</a>
-    <a class="btn btn-outline-secondary" href="/calendar">View calendar</a>
-  </div>
+<div class="index-hero text-center">
+    <h1 class="display-5 fw-bold mb-3">McGill Medical AI Assistant</h1>
+    <p class="lead text-muted mb-4">
+        Created during the <strong>MAIS Hacks 2025 Hackathon</strong>, this project explores how 
+        <strong>AI-driven agents</strong> can assist in medical contexts by answering patient calls, 
+        providing basic symptom guidance, and scheduling follow-up appointments.
+    </p>
+    <p class="text-muted mb-4">
+        Our goal is to build an intelligent system that helps healthcare professionals handle non-emergency 
+        calls efficiently, while ensuring accessibility and safety for all users.
+    </p>
+
+    <a href="/register" class="btn btn-primary px-4 py-2 rounded-pill">Contact the AI Agent</a>
+</div>
+
+<section class="index-section mt-5">
+    <div class="container">
+        <h2 class="h4 mb-3">How It Works</h2>
+        <ul class="text-start mx-auto" style="max-width: 700px;">
+            <li class="mb-2">📞 Call or text our AI-powered assistant using the number displayed above.</li>
+            <li class="mb-2">🤖 The agent uses speech recognition and medical knowledge to understand your request.</li>
+            <li class="mb-2">💬 It provides initial guidance or triage and helps you schedule appointments if needed.</li>
+            <li class="mb-2">🩺 This system is designed to support — not replace — healthcare professionals.</li>
+        </ul>
+    </div>
+</section>
+
+<section class="index-section mt-5 text-center">
+    <h2 class="h4 mb-3">About the Project</h2>
+    <p class="text-muted mx-auto" style="max-width: 700px;">
+        This project was built by McGill students for the <strong>MAIS Hacks 2025</strong> competition, combining 
+        <strong>Flask</strong>, <strong>Twilio</strong>, and <strong>AI speech models</strong> to demonstrate how 
+        machine learning can make healthcare communication more efficient and accessible.  
+    </p>
+</section>
 {% endblock %}

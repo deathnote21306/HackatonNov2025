@@ -24,8 +24,6 @@
         </button>
         <div id="nav" class="collapse navbar-collapse">
           <ul class="navbar-nav ms-auto">
-            <li class="nav-item"><a class="nav-link" href="/calendar">Calendar</a></li>
-            <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
             {% if session.get("user_id") %}
               <li class="nav-item"><a class="nav-link" href="/logout">Log out</a></li>
             {% else %}

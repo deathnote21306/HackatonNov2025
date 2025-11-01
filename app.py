@@ -38,9 +38,10 @@ def after_request(response):
 @app.route("/")
 @app.route("/index")
 def index():
-    if session.get("user_id") is None:
+    if session.get("user_id"):
+        return render_template("user_panel.html")
+    else:
         return render_template("index.html")
-    return render_template("index.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -108,6 +109,13 @@ def register():
         )
         session["user_id"] = new_id
 
-        return redirect("/")
+        return render_template("user_panel.html")
     else:
         return render_template("register.html")
+    
+@app.route("/user_panel")
+def user_panel():
+    if session.get("user_id"):
+        return render_template("user_panel.html")
+    else:
+        return render_template("index.html")

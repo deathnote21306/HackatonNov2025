@@ -1,0 +1,7 @@
+flask
+cs50
+flask_session
+cryptography
+dotenv
+werkzeug
+flask_wtf

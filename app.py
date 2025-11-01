@@ -1,5 +1,5 @@
 import os
-import SQL
+import sqlite3
 
 from cryptography.fernet import Fernet
 from flask import Flask, flash, redirect, render_template, request, session, jsonify
@@ -18,7 +18,7 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-db = SQL.SQL("sqlite:///app.db")
+db = sqlite3.connect("app.db")
 
 load_dotenv()
 

@@ -1,7 +1,7 @@
 import os
+import SQL
 
 from cryptography.fernet import Fernet
-from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session, jsonify
 from flask_session import Session
 from flask_wtf import CSRFProtect
@@ -18,7 +18,7 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-db = SQL("sqlite:///app.db")
+db = SQL.SQL("sqlite:///app.db")
 
 load_dotenv()
 

@@ -1,0 +1,387 @@
+{
+  "name": "AI Appointment Booking (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a2bc10e2-cdda-4bb1-802e-4c803393b28c",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1632,
+        112
+      ],
+      "id": "86b6ca36-2ca2-4ee4-a289-debdad81244b",
+      "name": "Webhook (ElevenLabs)",
+      "webhookId": "a2bc10e2-cdda-4bb1-802e-4c803393b28c"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1314a1a5-7ba1-49a0-90f7-d9a7955c266e",
+              "name": "name",
+              "value": "={{ $json.body.User_name }}",
+              "type": "string"
+            },
+            {
+              "id": "4c264f2a-2a1a-4e4d-ae87-b585af40b8dc",
+              "name": "email",
+              "value": "={{ $json.body?.email || $json.email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "79ab009c-f38d-4508-9f7a-471794f6be6e",
+              "name": "reason",
+              "value": "={{ $json.body.Reason }}",
+              "type": "string"
+            },
+            {
+              "id": "ac8dd633-d4d9-40b6-b2d5-9edf4feb5114",
+              "name": "date",
+              "value": "={{ $json.body.Date }}",
+              "type": "string"
+            },
+            {
+              "id": "eb6840a9-eecb-42c0-b8c2-ff27dd55d73c",
+              "name": "time",
+              "value": "=={{ String($json.body.Time || \"\")\n  .toLowerCase()\n  .replace(/\\./g, \"\")           // remove dots\n  .replace(/\\s+/g, \"\")          // remove spaces\n  .replace(/(a|p)m?m?$/, \"$1m\") // ensure \"am\" or \"pm\" ending\n}}",
+              "type": "string"
+            },
+            {
+              "id": "21d89f5e-6c3a-40dd-baa1-3a69911dbecd",
+              "name": "calendarEmail",
+              "value": "=mcgillmed.assistant@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "92f206f0-f583-4884-bcfd-d40ea175cbcc",
+              "name": "startISO",
+              "value": "=={{ \n(() => {\n  const data = $json.body || $json;\n\n  const dateStr = String(data.Date || data.date || \"\").trim();\n  const timeStr = String(data.Time || data.time || \"\").trim();\n  if (!dateStr || !timeStr) return null;\n\n  // Mois en texte (pour \"November 25\" etc.)\n  const months = {\n    january:0,february:1,march:2,april:3,may:4,june:5,\n    july:6,august:7,september:8,october:9,november:10,december:11\n  };\n\n  // Analyse du mois et du jour\n  let monthNum, dayNum;\n  const named = dateStr.toLowerCase().match(/([a-z]+)\\s*(\\d{1,2})/);\n  if (named) {\n    monthNum = months[named[1]];\n    dayNum = parseInt(named[2], 10);\n  } else {\n    const parts = dateStr.split(\"-\").map(Number);\n    if (parts.length >= 2) {\n      monthNum = parts[1] - 1;\n      dayNum = parts[2] || 1;\n    } else return null;\n  }\n\n  // Année forcée à 2025 ✅\n  const yearNum = 2025;\n\n  // Lecture de l'heure\n  let t = timeStr, isPM = /pm/i.test(t), isAM = /am/i.test(t);\n  t = t.replace(/\\s?(am|pm)/ig, \"\");\n  const [hourRaw, minuteRaw, secRaw] = t.split(\":\").map(Number);\n  let hh = hourRaw || 0, mm = minuteRaw || 0, ss = secRaw || 0;\n  if (isPM && hh < 12) hh += 12;\n  if (isAM && hh === 12) hh = 0;\n\n  const dt = new Date(yearNum, monthNum, dayNum, hh, mm, ss);\n  dt.setTime(dt.getTime() + 18000000);\n\n  // Conversion locale → ISO avec fuseau horaire local\n  const pad = n => String(n).padStart(2,\"0\");\n  const offset = -dt.getTimezoneOffset();\n  const sign = offset >= 0 ? \"+\" : \"-\";\n  const offH = pad(Math.floor(Math.abs(offset)/60));\n  const offM = pad(Math.abs(offset)%60);\n\n  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}${sign}${offH}:${offM}`;\n})()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "892d4913-eef8-4a2e-b677-f1084813daca",
+              "name": "endISO",
+              "value": "=={{ \n(() => {\n  const data = $json.body || $json;\n\n  const dateStr = String(data.Date || data.date || \"\").trim();\n  const timeStr = String(data.Time || data.time || \"\").trim();\n  if (!dateStr || !timeStr) return null;\n\n  // Mois en texte (pour \"November 25\" etc.)\n  const months = {\n    january:0,february:1,march:2,april:3,may:4,june:5,\n    july:6,august:7,september:8,october:9,november:10,december:11\n  };\n\n  // Analyse du mois et du jour\n  let monthNum, dayNum;\n  const named = dateStr.toLowerCase().match(/([a-z]+)\\s*(\\d{1,2})/);\n  if (named) {\n    monthNum = months[named[1]];\n    dayNum = parseInt(named[2], 10);\n  } else {\n    const parts = dateStr.split(\"-\").map(Number);\n    if (parts.length >= 2) {\n      monthNum = parts[1] - 1;\n      dayNum = parts[2] || 1;\n    } else return null;\n  }\n\n  // Année forcée à 2025 ✅\n  const yearNum = 2025;\n\n  // Lecture de l'heure\n  let t = timeStr, isPM = /pm/i.test(t), isAM = /am/i.test(t);\n  t = t.replace(/\\s?(am|pm)/ig, \"\");\n  const [hourRaw, minuteRaw, secRaw] = t.split(\":\").map(Number);\n  let hh = hourRaw || 0, mm = minuteRaw || 0, ss = secRaw || 0;\n  if (isPM && hh < 12) hh += 12;\n  if (isAM && hh === 12) hh = 0;\n\n  const dt = new Date(yearNum, monthNum, dayNum, hh, mm, ss);\n\n  // (keep your existing internal adjustment)\n  dt.setTime(dt.getTime() + 18000000);\n\n  // ✅ Then add +60 more minutes (final offset)\n  dt.setTime(dt.getTime() + 60 * 60000);\n\n  // Conversion locale → ISO avec fuseau horaire local\n  const pad = n => String(n).padStart(2,\"0\");\n  const offset = -dt.getTimezoneOffset();\n  const sign = offset >= 0 ? \"+\" : \"-\";\n  const offH = pad(Math.floor(Math.abs(offset)/60));\n  const offM = pad(Math.abs(offset)%60);\n\n  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}${sign}${offH}:${offM}`;\n})()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "b2d0058f-8537-4326-bf0f-9ee48c6b79d2",
+              "name": "Mcgill ID",
+              "value": "={{ $json.body?.mcgill_id || $json.mcgill_id || '261167713' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1408,
+        112
+      ],
+      "id": "64df1e9b-bfe1-4646-b219-3e3627f49324",
+      "name": "Prepare & Format"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $json.calendarEmail || 'primary' }}",
+          "mode": "id",
+          "__regex": "(^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)"
+        },
+        "timeMin": "={{ $json.startISO.replace(/^=|\\n$/g, '') }}",
+        "timeMax": "={{ $json.endISO.replace(/^=|\\n$/g, '') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -1184,
+        192
+      ],
+      "id": "8c23b11e-fe48-40c0-a9df-49d54f01000f",
+      "name": "Check Availability",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uh3CSRO2zDxpu84m",
+          "name": "Google Calendar account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve the boolean output from the previous node\nconst available = $json.available;\n\n// Bring in the data from your \"Prepare & Format\" node (inputs like name, date, etc.)\nconst base = $node[\"Prepare & Format\"].json || {};\n\n// Return everything together, preserving context\nreturn [{\n  json: {\n    ...base,\n    available: available === true // force boolean (avoids undefined/null)\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        192
+      ],
+      "id": "4f2a3c5c-6d45-4539-9c29-43a6f42a5f0c",
+      "name": "Is Free?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "320f0b52-bb94-455e-a3ba-988a5cde765b",
+              "leftValue": "={{ $json.available }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -736,
+        192
+      ],
+      "id": "da7d52db-f6a3-49bc-92f9-0f3451ddcd75",
+      "name": "If Available?"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $json.calendarEmail || 'primary' }}",
+          "mode": "id"
+        },
+        "start": "={{ $json.startISO.trim().replace(/^=+/, '') }}",
+        "end": "={{ $json.endISO.trim().replace(/^=+/, '') }}",
+        "additionalFields": {
+          "description": "={{ `Reason: ${$json.reason}\\nEmail: ${$json.email}` }}",
+          "summary": "={{ `Appointment with ${$json.name}` }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -512,
+        16
+      ],
+      "id": "0eb8de0b-7a60-49c3-b422-1107b29243c8",
+      "name": "Create Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uh3CSRO2zDxpu84m",
+          "name": "Google Calendar account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=={{ \n(() => {\n  const name = $json.name || $json.User_name || \"the patient\";\n  const time = $json.Time || \"3:00 p.m.\";\n  const date = $json.Date || \"November 25\";\n  return { message: `✅ The appointment for ${name} has been booked on ${date} at ${time}.` };\n})()\n}}\n",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -288,
+        16
+      ],
+      "id": "d6edc867-1965-4eb6-9db8-b33440a9a453",
+      "name": "Respond (Success)"
+    },
+    {
+      "parameters": {
+        "jsCode": "function ensureDate(value) {\n  // Handle if it's already a Date\n  if (value instanceof Date && !isNaN(value)) return value;\n\n  // Handle ISO string or timestamp\n  const d = new Date(value);\n  if (!isNaN(d)) return d;\n\n  // Handle manual fallback formats like \"2025-11-03 10:00\"\n  const parts = String(value || \"\").match(/(\\d{4})-(\\d{2})-(\\d{2})(?:[ T](\\d{2}):(\\d{2}))?/);\n  if (parts) {\n    const [_, y, m, day, h = \"0\", min = \"0\"] = parts;\n    return new Date(Number(y), Number(m) - 1, Number(day), Number(h), Number(min));\n  }\n\n  // Fallback: current time\n  return new Date();\n}\n\n// Usage\nconst start = ensureDate($json.startISO);\nconst dur = Number($json.durationMin || 30);\nconst s1 = new Date(start.getTime() + dur * 60000);\nconst s2 = new Date(start.getTime() + (dur + 30) * 60000);\nconst s3 = new Date(start.getTime() + (dur + 60) * 60000);\n\nreturn [{\n  json: {\n    suggestions: [s1.toISOString(), s2.toISOString(), s3.toISOString()],\n    validatedStart: start.toISOString(),\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        240
+      ],
+      "id": "b19112ad-dada-4a64-94a2-738f264ff683",
+      "name": "Suggest Alternatives"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"result\": \"unavailable\",\n  \"message\": \"That time isn't available. Would you like one of these options?\",\n  \"suggestions\": \"={{ $json.suggestions }}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -288,
+        240
+      ],
+      "id": "1eeecbad-a984-469b-ae9c-253f05da6970",
+      "name": "Respond (Unavailable)"
+    }
+  ],
+  "pinData": {
+    "Webhook (ElevenLabs)": [
+      {
+        "json": {
+          "headers": {
+            "host": "ineslabarthe.app.n8n.cloud",
+            "user-agent": "ElevenLabs/1.0",
+            "content-length": "158",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "34.59.11.47",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9982619ac722a2a1-ORD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "34.59.11.47, 172.70.127.136",
+            "x-forwarded-host": "ineslabarthe.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-26-7b6dc7c86c-v7lp6",
+            "x-is-trusted": "yes",
+            "x-real-ip": "34.59.11.47"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "duration": "60",
+            "Date": "2025-11-08",
+            "email": "williamslendjoungou01@gmail.com",
+            "Time": "11:00",
+            "Mcgill_id": "23",
+            "Reason": "pain",
+            "User_name": "nef"
+          },
+          "webhookUrl": "https://ineslabarthe.app.n8n.cloud/webhook/a2bc10e2-cdda-4bb1-802e-4c803393b28c",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook (ElevenLabs)": {
+      "main": [
+        [
+          {
+            "node": "Prepare & Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare & Format": {
+      "main": [
+        [
+          {
+            "node": "Check Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "main": [
+        [
+          {
+            "node": "Is Free?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Free?": {
+      "main": [
+        [
+          {
+            "node": "If Available?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Available?": {
+      "main": [
+        [
+          {
+            "node": "Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Suggest Alternatives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event": {
+      "main": [
+        [
+          {
+            "node": "Respond (Success)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suggest Alternatives": {
+      "main": [
+        [
+          {
+            "node": "Respond (Unavailable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "04f07baf-74cd-4dcf-8e64-6dc0a0e8079b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5fc62a0f027da91788cfe5522220faea5b9d9f1165162a0b10df72a3544b0eb3"
+  },
+  "id": "2FoEglHDIK1mjv0g",
+  "tags": []
+}

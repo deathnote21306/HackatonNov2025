@@ -32,3 +32,6 @@ def get_user_appointments(user_id: int):
         WHERE user_id = ?
         ORDER BY start_at ASC
     """, user_id)
+
+def apologize(message):
+    return render_template("apology.html", message=message)

@@ -82,39 +82,42 @@ def logout():
     return redirect("/")
 
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
+#@app.route("/register", methods=["GET", "POST"])
+#def register():
+#
+ #   if request.method == "POST":
+  #      if not request.form.get("username"):
+   #         return apologize("must provide username")
+#
+ #       rows = db.execute("SELECT id FROM users WHERE username = ?", request.form.get("username"))
+  #      if len(rows) > 0:
+   #         return apologize("username already taken")
+    #    
+    #    elif not request.form.get("mcgill_id"):
+ #           return apologize("must provide password")
+#
+#
+ #       elif not request.form.get("password"):
+  #          return apologize("must provide password")
+#
+ #       elif not request.form.get("confirmation"):
+  #          return apologize("must provide confirmation")
+#
+ #       elif request.form.get("password") != request.form.get("confirmation"):
+  #          return apologize("passwords must match")
+#
+ #       hash = generate_password_hash(request.form.get("password"))
+#
+ #       new_id = db.execute(
+  #          "INSERT INTO users (username, user_mcgill_id, password_hash) VALUES (?,?, ?)",
+   #         request.form.get("username"), request.form.get("mcgill_id"),
+    #        hash,
+        #)
+     #   session["user_id"] = new_id
 
-    if request.method == "POST":
-        if not request.form.get("username"):
-            return apologize("must provide username")
-
-        rows = db.execute("SELECT id FROM users WHERE username = ?", request.form.get("username"))
-        if len(rows) > 0:
-            return apologize("username already taken")
-
-
-        elif not request.form.get("password"):
-            return apologize("must provide password")
-
-        elif not request.form.get("confirmation"):
-            return apologize("must provide confirmation")
-
-        elif request.form.get("password") != request.form.get("confirmation"):
-            return apologize("passwords must match")
-
-        hash = generate_password_hash(request.form.get("password"))
-
-        new_id = db.execute(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-            request.form.get("username"),
-            hash,
-        )
-        session["user_id"] = new_id
-
-        return render_template("user_panel.html")
-    else:
-        return render_template("register.html")
+    #    return render_template("user_panel.html")
+  #  else:
+   #     return render_template("register.html")
     
 
 @app.route("/user_panel")
@@ -150,18 +153,13 @@ def elevenlabs_webhook():
 
     start_iso = body.get("startISO")
 
-    # upsert user by mcgill_id (minimal)
-    user_id = None
-    if mcgill_id:
-        rows = db.execute("SELECT id FROM users WHERE mcgill_id = ?", mcgill_id)
-        if rows:
-            user_id = rows[0]["id"]
-        else:
-            uname = user_name or f"user_{mcgill_id}"
-            user_id = db.execute(
-                "INSERT INTO users (username, mcgill_id, password_hash) VALUES (?, ?, ?)",
-                uname, mcgill_id, generate_password_hash(mcgill_id)
-            )
+    # look up user
+    rows = db.execute("SELECT id FROM users WHERE username = ? AND mcgill_id = ?", user_name, mcgill_id)
+    if len(rows) != 1:
+        return jsonify({"ok": False, "error": "unknown user"}), 400
+    
+    user_id = rows[0]["id"]
+
     def to_dt(iso, d, t):
         if iso:
             try: return datetime.fromisoformat(iso.replace("Z","+00:00"))

@@ -8,7 +8,7 @@ from flask_wtf import CSRFProtect
 from dotenv import load_dotenv
 from werkzeug.security import check_password_hash, generate_password_hash
 from helpers import apologize, get_user_appointments
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 app = Flask(__name__)
 
@@ -134,45 +134,53 @@ def user_panel():
 
 @app.post("/webhooks/elevenlabs")
 def elevenlabs_webhook():
+    # auth
     if request.headers.get("X-N8N-Token") != N8N_WEBHOOK_TOKEN:
         abort(401)
 
-    data = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True) or {}
+    body = payload.get("body") if isinstance(payload.get("body"), dict) else payload
 
-    # Expect n8n to send at least: user_id, transcript
-    user_id      = data.get("user_id")            # int
-    transcript   = data.get("transcript", "")     # str
-    start_at     = data.get("start_at")           # 'YYYY-MM-DD HH:MM'  (optional)
-    kind         = (data.get("kind") or "Consultation").strip()
-    language     = data.get("language")
-    caller       = data.get("caller")
-    call_sid     = data.get("callSid")
-    recording    = data.get("recordingUrl")
+    # read fields (accept different casings)
+    user_name = body.get("User_name") or body.get("user_name")
+    mcgill_id = (body.get("Mcgill_id") or body.get("mcgill_id") or "").strip()
+    reason    = body.get("Reason") or body.get("reason") or "General"
+    date_str  = body.get("Date") or body.get("date")          # "YYYY-MM-DD"
+    time_str  = body.get("Time") or body.get("time")          # "HH:MM"
 
-    # Always store raw payload for debugging/audit
-    db.execute(
-        "INSERT INTO call_transcripts (user_id, caller, call_sid, recording_url, transcript, language) VALUES (?, ?, ?, ?, ?, ?)",
-        user_id, caller, call_sid, recording, transcript, language
+    start_iso = body.get("startISO")
+
+    # upsert user by mcgill_id (minimal)
+    user_id = None
+    if mcgill_id:
+        rows = db.execute("SELECT id FROM users WHERE mcgill_id = ?", mcgill_id)
+        if rows:
+            user_id = rows[0]["id"]
+        else:
+            uname = user_name or f"user_{mcgill_id}"
+            user_id = db.execute(
+                "INSERT INTO users (username, mcgill_id, password_hash) VALUES (?, ?, ?)",
+                uname, mcgill_id, generate_password_hash(mcgill_id)
+            )
+    def to_dt(iso, d, t):
+        if iso:
+            try: return datetime.fromisoformat(iso.replace("Z","+00:00"))
+            except: pass
+        if d and t:
+            try: return datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+            except: return None
+        return None
+
+    start_dt = to_dt(start_iso, date_str, time_str)
+    if not start_dt:
+        return jsonify({"ok": True, "note": "missing/invalid start time"}), 200
+
+    # insert appointment
+    appt_id = db.execute(
+        """INSERT INTO appointments
+           (user_id, kind, start_at, status, reason)
+           VALUES (?, ?, ?, 'scheduled', ?)""", user_id, start_dt.isoformat(),
+         reason
     )
 
-    # If we don't have a user_id or a parsed datetime yet, stop after storing transcript.
-    if not user_id:
-        return {"ok": True, "note": "stored transcript (missing user_id)"}
-
-    # If n8n already parsed date/time, just use it. Otherwise, skip creating an appointment here.
-    if not start_at:
-        return {"ok": True, "note": "stored transcript (no start_at provided)"}
-
-    # (Optional) sanity check: must look like 'YYYY-MM-DD HH:MM'
-    try:
-        datetime.strptime(start_at, "%Y-%m-%d %H:%M")
-    except ValueError:
-        return {"ok": True, "note": "start_at not in 'YYYY-MM-DD HH:MM' format"}
-
-    # Create the appointment
-    db.execute(
-        "INSERT INTO appointments (user_id, kind, start_at, status) VALUES (?, ?, ?, ?)",
-        user_id, kind, start_at, "pending"
-    )
-
-    return {"ok": True, "created": {"user_id": user_id, "kind": kind, "start_at": start_at}}
+    return jsonify({"ok": True, "appointment_id": appt_id})

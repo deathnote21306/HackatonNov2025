@@ -1,33 +1,94 @@
-# 🩺 McGill Medical AI Assistant (MAIS 2025)
+<h1 align="center">McGill Medical AI Assistant</h1>
 
-This project is an **AI medical appointment assistant** built by McGill students for the MAIS 2025 Hackathon.  
-It listens to patient calls (via ElevenLabs), extracts appointment details, and books them automatically using Flask, SQLite, and n8n.
+<p align="center">
+  <strong>A voice-first appointment booking system for clinics — call in, talk to an AI receptionist, get booked.</strong><br/>
+  Built for the McGill AI Society (MAIS) 2025 Hackathon. 4th place out of ~40 teams.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-000000?style=flat&logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=flat&logo=sqlite&logoColor=white" />
+  <img src="https://img.shields.io/badge/n8n-EA4B71?style=flat&logo=n8n&logoColor=white" />
+  <img src="https://img.shields.io/badge/ElevenLabs-Voice-000000?style=flat" />
+  <img src="https://img.shields.io/badge/MAIS%202025-4th%20Place-gold?style=flat" />
+</p>
 
 ---
 
-## ⚙️ Setup Instructions
+## What is this?
 
-### 1. Clone the project
-```bash
-git clone https://github.com/<your-username>/<repo>.git
-cd <repo>
+A patient calls a phone number. An ElevenLabs voice agent picks up, has a natural conversation — "I'd like to book a physical next Tuesday afternoon" — extracts the intent, and forwards the structured details to an n8n workflow. n8n normalizes the date and time, verifies the slot, and hits a Flask webhook that writes the appointment to a SQLite database. When the patient logs into the clinic's web portal, their upcoming appointment is already there.
+
+End to end: **voice → LLM intent extraction → automation workflow → backend → patient portal.** No keyboard involved.
+
+---
+
+## Why we built it
+
+Clinic receptionists spend a huge portion of their day on the phone doing the same three tasks: identifying the caller, finding a slot, writing it down. It's repetitive, error-prone, and bottlenecks the rest of the clinic.
+
+We wanted to see how far you could get in 24 hours by stitching together the three pieces that have recently become good enough to replace that workflow — conversational voice AI, low-code automation, and a tiny backend. The judges seemed to like the answer: we placed **4th out of about 40 teams**, with a task-completion rate around **90%** across our test calls.
+
+---
+
+## How it works
+
+```
+   ┌───────────┐     ┌──────────────┐     ┌──────────────┐     ┌───────────────┐
+   │  Patient  │ --> │  ElevenLabs  │ --> │     n8n      │ --> │    Flask      │
+   │   call    │     │  voice agent │     │  workflow    │     │   webhook     │
+   └───────────┘     └──────────────┘     └──────────────┘     └──────┬────────┘
+                     Captures intent       Normalizes date/time,              │
+                     and entities          validates, forwards        writes to DB
+                                                                              │
+                                                                      ┌───────▼───────┐
+                                                                      │ SQLite +      │
+                                                                      │ Flask portal  │
+                                                                      └───────────────┘
+                                                                      Patient logs in
+                                                                      and sees booking
 ```
 
-### 2. Create a virtual environment
+**Step by step:**
+
+1. **Voice capture** — ElevenLabs runs a conversational agent tuned for clinic bookings. It asks the caller for name, McGill ID, reason, and preferred time.
+2. **Intent to JSON** — The agent emits a structured payload (`User_name`, `Mcgill_id`, `Reason`, `Date`, `Time`, `duration`).
+3. **n8n workflow** — Parses the natural-language date ("next Tuesday at 2") into ISO format, checks for conflicts, and posts the final payload to our Flask webhook.
+4. **Flask backend** — Authenticates the request with a shared token, looks up the user by McGill ID, and inserts the appointment into SQLite.
+5. **Patient portal** — A small Flask website with login / sign-up lets users see their "Next Appointment" card, styled to match a real clinic dashboard.
+
+Sensitive fields are encrypted at rest using a **Fernet** key loaded from `.env`, and passwords are hashed with Werkzeug.
+
+---
+
+## Tech stack
+
+| Layer | Tool |
+|---|---|
+| Voice agent | ElevenLabs Conversational AI |
+| Orchestration | n8n (self-hosted workflow) |
+| Web backend | Flask + Flask-Session + Flask-WTF |
+| Database | SQLite (via CS50's `SQL` wrapper) |
+| Security | Werkzeug password hashing, Fernet symmetric encryption, CSRF protection |
+| Frontend | Jinja2 templates + static CSS |
+
+---
+
+## Install & run locally
+
 ```bash
+git clone https://github.com/deathnote21306/HackatonNov2025.git
+cd HackatonNov2025
+
 python -m venv .venv
-. .\.venv\Scripts\Activate.ps1    # Windows
-# or
-source .venv/bin/activate            # macOS/Linux
+source .venv/bin/activate            # Windows: .\.venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
 ```
 
-### 3. Install dependencies
-```bash
-pip install flask flask-session flask-wtf python-dotenv cryptography cs50
-```
+Create a `.env`:
 
-### 4. Create a `.env` file
-Create a file named `.env` in your project folder:
 ```env
 FLASK_APP=app.py
 FLASK_ENV=development
@@ -36,15 +97,15 @@ DATABASE_URL=sqlite:///app.db
 N8N_WEBHOOK_TOKEN=super-secret-token
 FERNET_KEY=<paste-generated-key>
 ```
-To generate a Fernet key:
+
+Generate a Fernet key:
+
 ```bash
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
----
+Initialize the database (`sqlite3 database.db`):
 
-## 🗄️ Database Setup
-Run these commands to create your tables:
 ```sql
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,39 +123,26 @@ CREATE TABLE appointments (
 );
 ```
 
-### Optional: Add a test user
-Generate a password hash:
-```bash
-python - <<'PY'
-from werkzeug.security import generate_password_hash
-print(generate_password_hash("test123"))
-PY
-```
+Run:
 
-Then open `sqlite3 app.db` and run:
-```sql
-INSERT INTO users (username, password_hash, mcgill_id)
-VALUES ('williams', '<PASTE_HASH>', '261167713');
-```
-
----
-
-## ▶️ Run the app
 ```bash
 flask run
 ```
-Then visit:
-👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
+
+Open <http://127.0.0.1:5000>.
 
 ---
 
-## 🌐 Connect n8n or ElevenLabs
-Your webhook endpoint (in `app.py`):
+## Connecting n8n / ElevenLabs
+
+The webhook endpoint lives at:
+
 ```
 POST /webhooks/elevenlabs
 ```
 
-Example request body:
+Expected payload:
+
 ```json
 {
   "User_name": "williams",
@@ -106,26 +154,43 @@ Example request body:
 }
 ```
 
----
+Include the shared `N8N_WEBHOOK_TOKEN` for authentication. For local testing, expose Flask with:
 
-## 🧠 Workflow Summary
-1. **ElevenLabs Agent** → captures user intent (“Book me a checkup next Tuesday”)
-2. **n8n Workflow** → converts date/time to ISO and checks availability
-3. **Flask Webhook** → receives the final appointment and saves it in SQLite
-4. **Website (Flask)** → displays “Next Appointment” for logged-in users
+```bash
+npx localtunnel --port 5000
+```
 
----
-
-## 💡 Tips
-- Run Flask in VS Code terminal inside `.venv`
-- Add `.env` to `.gitignore`
-- If testing n8n locally, expose your Flask server using:
-  ```bash
-  npx localtunnel --port 5000
-  ```
+The exported n8n workflow (`AI Appointment Booking (Fixed).json`) and a link to the hosted ElevenLabs agent live at the repo root.
 
 ---
 
-## 👥 Team
-Built by McGill U1 & U2 students — MAIS 2025 Hackathon
+## Project layout
 
+```
+app.py                              Flask routes, auth, webhook handler
+helpers.py                          Shared utilities (apology page, appointment queries)
+templates/                          Jinja2 pages: login, sign-up, dashboard
+static/                             Stylesheets and assets
+AI Appointment Booking (Fixed).json Exported n8n workflow
+AI Receptionist Link                ElevenLabs agent URL
+requirements.txt                    Python dependencies
+```
+
+---
+
+## Design decisions worth noting
+
+- **Let specialized tools do what they're good at.** ElevenLabs handles voice, n8n handles the messy date-parsing and branching logic, Flask just stores the result. Gluing three simple things beats building one complicated thing in a hackathon.
+- **Shared-token webhook auth.** Simple, sufficient for the demo, and easy to rotate.
+- **Encrypt sensitive fields at rest.** Medical context raised the bar on what "good enough" meant even for a 24-hour build.
+- **Server-rendered portal.** Flask + Jinja templates kept the frontend to a couple of files so we could spend the weekend on the voice pipeline.
+
+---
+
+## Team
+
+Built by McGill U1 & U2 students at the MAIS 2025 Hackathon.
+
+---
+
+Part of [William's portfolio](https://deathnote21306.github.io/).
